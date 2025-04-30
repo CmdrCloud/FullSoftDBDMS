@@ -17,6 +17,10 @@ Route::get('backup', function() {
     return view('backup');
 })->name('backup');
 
+Route::get('reportes', function() {
+    return view('reportes');
+})->name('reportes');
+
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
