@@ -13,6 +13,10 @@ Route::get('ventas', function() {
     return view('ventas');
 })->name('ventas');
 
+Route::get('backup', function() {
+    return view('backup');
+})->name('backup');
+
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
