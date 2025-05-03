@@ -26,6 +26,18 @@ class VehicleController extends Controller
     }
 
     /**
+     * Get vehicle details for AJAX requests.
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getVehicleDetails($id)
+    {
+        $vehicle = Vehicle::findOrFail($id);
+        return response()->json($vehicle);
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
@@ -68,6 +80,10 @@ class VehicleController extends Controller
     public function edit(string $id)
     {
         $vehicle = Vehicle::findOrFail($id);
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json($vehicle);
+        }
+
         return view('gestionar_vehiculos', compact('vehicle'));
     }
 
