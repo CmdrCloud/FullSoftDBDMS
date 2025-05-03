@@ -33,4 +33,9 @@ class Vehicle extends Model
         'updated_at'
     ];
 
+    public function setNumberPlateAttribute($value) {
+        $this->attributes['numberPlate'] = strtoupper($value);
+    }
+
+
 }

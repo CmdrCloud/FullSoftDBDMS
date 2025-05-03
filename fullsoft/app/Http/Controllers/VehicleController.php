@@ -49,7 +49,7 @@ class VehicleController extends Controller
             $validated['imgPath'] = 'images/' . $filename;
         }
 
-        VehicleController::create($validated);
+        Vehicle::create($validated);
         return redirect()->route('gestionar_vehiculos')->with('success', 'Vehicle created successfully.');
     }
 
