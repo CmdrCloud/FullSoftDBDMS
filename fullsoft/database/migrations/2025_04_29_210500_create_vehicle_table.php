@@ -13,6 +13,16 @@ return new class extends Migration
     {
         Schema::create('vehicle', function (Blueprint $table) {
             $table->id();
+            $table->string('model');
+            $table->string('brand');
+            $table->string('cylinders');
+            $table->string('numberPlate')->nullable();
+            $table->integer('year');
+            $table->string('imgPath')->nullable();
+            $table->boolean('airConditioning')->default(false);
+            $table->boolean('metallicPaint')->default(false);
+            $table->boolean('partOfPayment')->default(false);
+            $table->decimal('price', 8, 2);
             $table->timestamps();
         });
     }

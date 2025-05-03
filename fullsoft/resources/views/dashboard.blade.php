@@ -1,6 +1,6 @@
 <x-layouts.app :title="__('Dashboard')">
     <div class="flex h-full w-full flex-1 flex-col gap-4 rounded-xl">
-        <div class="grid auto-rows-min gap-4 md:grid-cols-3">
+        <div class="grid auto-rows-min gap-4 md:grid-cols-4">
             <div class="flex items-center justify-center relative aspect-video overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-zinc-500">
                 <a href="{{ route('ventas') }}" class="cursor-pointer p-2 hover:text-gray-300">Registrar una Venta</a>
             </div>
@@ -9,6 +9,9 @@
             </div>
             <div class="flex items-center justify-center relative aspect-video overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-zinc-500">
                 <a href="{{ route('reportes') }}" class="cursor-pointer p-2 hover:text-gray-300">Emitir Reportes</a>
+            </div>
+            <div class="flex items-center justify-center relative aspect-video overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-zinc-500">
+                <a href="{{ route('gestionar_vehiculos') }}" class="cursor-pointer p-2 hover:text-gray-300">Gestionar Vehiculos</a>
             </div>
         </div>
         <div class="relative h-full flex-1 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700">
