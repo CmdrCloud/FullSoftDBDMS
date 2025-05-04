@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VentasController;
@@ -17,8 +18,19 @@ use App\Livewire\Settings\Profile;
 Route::get('/', fn() => view('welcome'))->name('home');
 Route::get('ventas', [VentasController::class, 'index'])->name('ventas');
 Route::get('catalogo', [CatalogController::class, 'index'])->name('catalogo');
-Route::view('backup',   'backup')->name('backup');
 Route::view('reportes', 'reportes')->name('reportes');
+
+
+Route::get('backup', [BackupController::class, 'index'])
+     ->name('backup');               // ← give it the “backup” name your links expect
+
+// Trigger a new backup
+Route::post('backup', [BackupController::class, 'create'])
+     ->name('backup.run');          // ← no “/run” in the URI so your form can post to route('backup')
+
+// Download a specific backup file
+Route::get('backup/download/{filename}', [BackupController::class, 'download'])
+     ->name('backup.download');
 
 Route::get('api/vehicles/{id}', [VentasController::class, 'getVehicleDetails']);
 
