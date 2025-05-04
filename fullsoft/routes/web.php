@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
+use App\Http\Controllers\ReporteController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +22,7 @@ Route::view('backup',   'backup')->name('backup');
 Route::view('reportes', 'reportes')->name('reportes');
 
 Route::get('api/vehicles/{id}', [VentasController::class, 'getVehicleDetails']);
+Route::get('/reporte-ventas', [ReporteController::class, 'generarReporteVentas'])->name('reportes.ventas');
 
 Route::get('home', fn() => redirect()->route('home'));
 
