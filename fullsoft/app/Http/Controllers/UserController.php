@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -18,7 +19,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255i|unique:users',
             'password' => 'required|string|min:8',
             'title' => 'nullable|string|max:255',
             'commission' => 'nullable|numeric|min:0',
@@ -72,5 +73,52 @@ class UserController extends Controller
         $usuario = User::findOrFail($id);
         $usuario->delete();
         return redirect()->route('gestionar_usuarios')->with('success', 'Usuario eliminado exitosamente.');
+    }
+
+    /**
+     * Reset a user's commission to zero (after payout)
+     */
+    public function resetCommission($id)
+    {
+        // Only allow admins to reset others' commissions
+        if (Auth::user()->isAdmin || Auth::id() == $id) {
+            $user = User::findOrFail($id);
+            $oldCommission = $user->commission;
+            $user->commission = 0;
+            $user->save();
+
+            return response()->json([
+                'message' => 'Comisión restablecida exitosamente',
+                'previous_commission' => $oldCommission,
+                'current_commission' => 0
+            ]);
+        }
+
+        return response()->json(['error' => 'No autorizado'], 403);
+    }
+
+    /**
+     * View all user commissions (admin only)
+     */
+    public function viewCommissions()
+    {
+        if (!Auth::user()->isAdmin) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $users = User::select('id', 'name', 'email', 'commission')->get();
+        return response()->json($users);
+    }
+
+    /**
+     * View current user's commission
+     */
+    public function myCommission()
+    {
+        $user = Auth::user();
+        return response()->json([
+            'commission' => $user->commission,
+            'name' => $user->name
+        ]);
     }
 }

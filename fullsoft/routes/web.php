@@ -10,96 +10,71 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
+use Illuminate\Support\Facades\Auth;
 
-/*
-|--------------------------------------------------------------------------
-| Public Pages
-|--------------------------------------------------------------------------
-*/
+// Public pages
 Route::get('/', fn() => view('welcome'))->name('home');
-Route::get('ventas', [VentasController::class, 'index'])->name('ventas');
 Route::get('catalogo', [CatalogController::class, 'index'])->name('catalogo');
-Route::view('reportes', 'reportes')->name('reportes');
-
-
-Route::get('backup', [BackupController::class, 'index'])
-     ->name('backup');               // ← give it the “backup” name your links expect
-
-// Trigger a new backup
-Route::post('backup', [BackupController::class, 'create'])
-     ->name('backup.run');          // ← no “/run” in the URI so your form can post to route('backup')
-
-// Download a specific backup file
-Route::get('backup/download/{filename}', [BackupController::class, 'download'])
-     ->name('backup.download');
-
-Route::view('backup', 'backup')->name('backup');
-Route::view('reportes', 'reportes')->name('reportes');
-
-Route::get('api/vehicles/{id}', [VentasController::class, 'getVehicleDetails']);
 Route::get('/reporte-ventas', [ReporteController::class, 'generarReporteVentas'])->name('reportes.ventas');
+Route::view('reportes', 'reportes')->name('reportes');
 
-Route::get('home', fn() => redirect()->route('home'));
+// Vehicle details API (public)
+Route::get('api/vehicles/{id}', [VentasController::class, 'getVehicleDetails']);
 
-// Auth routes...
+// Authentication routes (login, register, logout via POST)
 require __DIR__.'/auth.php';
 
-/*
-|--------------------------------------------------------------------------
-| Protected (Auth + Verified)
-|--------------------------------------------------------------------------
-*/
+// Optional: allow GET logout for convenience
+Route::middleware('auth')->get('logout', function () {
+    Auth::logout();
+    return redirect()->route('home');
+})->name('logout.get');
+
+// Protected routes (auth + verified)
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard
     Route::view('dashboard', 'dashboard')->name('dashboard');
 
-    // User settings (Livewire)
+    // Sales: listing + storing
+    Route::get('ventas', [VentasController::class, 'index'])->name('ventas');
+    Route::post('ventas', [VentasController::class, 'store'])->name('ventas.store');
+
+    // API route for AJAX sale processing
+    Route::prefix('api')->group(function () {
+        Route::post('process-sale', [VentasController::class, 'store'])->name('api.processSale');
+    });
+
+    // Backup management (Encargado de Ventas)
+    Route::middleware('role:Encargado de Ventas')->prefix('backup')->group(function () {
+        Route::get('/', [BackupController::class, 'index'])->name('backup');
+        Route::post('/', [BackupController::class, 'create'])->name('backup.run');
+        Route::get('download/{filename}', [BackupController::class, 'download'])->name('backup.download');
+    });
+
+    // User settings
     Route::redirect('settings', 'settings/profile');
     Route::get('settings/profile', Profile::class)->name('settings.profile');
     Route::get('settings/password', Password::class)->name('settings.password');
     Route::get('settings/appearance', Appearance::class)->name('settings.appearance');
 
-    /*
-    |--------------------------------------------------
-    | Vehicles - Protected by "Encargado de Ventas" role
-    |--------------------------------------------------
-    */
+    // Commission management
+    Route::get('/my-commission', [UserController::class, 'myCommission'])->name('user.commission');
+    Route::view('/commissions', 'commissions')->name('commissions');
+
+    // Vehicle management (Encargado de Ventas)
     Route::middleware('role:Encargado de Ventas')->group(function () {
-        // "Manage Vehicles" page
-        Route::get('gestionar_vehiculos', [VehicleController::class, 'index'])
-             ->name('gestionar_vehiculos');
-        // All other vehicle CRUD
-        Route::resource('vehicles', VehicleController::class)
-             ->except('index');
+        Route::get('gestionar_vehiculos', [VehicleController::class, 'index'])->name('gestionar_vehiculos');
+        Route::resource('vehicles', VehicleController::class)->except('index');
     });
 
-    /*
-    |--------------------------------------------------
-    | Users - Protected by "Encargado de Ventas" role
-    |--------------------------------------------------
-    */
+    // User management (Encargado de Ventas)
     Route::middleware('role:Encargado de Ventas')->group(function () {
-        // "Manage Users" page
-        Route::get('gestionar_usuarios', [UserController::class, 'index'])
-             ->name('gestionar_usuarios');
-        // All other user CRUD
-        Route::resource('users', UserController::class)
-             ->except(['index','show']);
+        Route::get('gestionar_usuarios', [UserController::class, 'index'])->name('gestionar_usuarios');
+        Route::resource('users', UserController::class)->except(['index', 'show']);
+        Route::get('/user-commissions', [UserController::class, 'viewCommissions'])->name('admin.commissions');
+        Route::post('/reset-commission/{id}', [UserController::class, 'resetCommission'])->name('user.reset-commission');
     });
 
-    /*
-    |--------------------------------------------------
-    | API Routes for Vehicle Sales
-    |--------------------------------------------------
-    */
-    Route::prefix('api')->group(function () {
-        // Procesa la venta
-        Route::post('process-sale', [VentasController::class, 'processSale']);
-    });
-
-    // Esta ruta es la que permite exportar el reporte
+    // Report exporting
     Route::get('/reporte-ventas/exportar', [ReporteController::class, 'exportarReporte'])->name('reportes.exportar');
-
-
 });
-

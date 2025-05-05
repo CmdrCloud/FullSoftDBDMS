@@ -17,7 +17,7 @@ class Sale extends Model
         'date',
         'totalAmount',
         'totalUpfront',
-        'totalPartPayment'
+        'totalPartPayment',
     ];
 
     protected $casts = [

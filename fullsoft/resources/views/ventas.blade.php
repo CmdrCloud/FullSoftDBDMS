@@ -140,6 +140,11 @@
                                 <input type="text" id="client_name" name="client_name" required class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded p-2">
                             </div>
                             <div>
+    <label for="client_last_name" class="block text-sm font-medium">Apellido del Cliente *</label>
+    <input type="text" id="client_last_name" name="client_last_name" required class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded p-2">
+</div>
+
+                            <div>
                                 <label for="client_email" class="block text-sm font-medium">Email</label>
                                 <input type="email" id="client_email" name="client_email" class="w-full mt-1 border border-gray-300 dark:border-gray-600 rounded p-2">
                             </div>
@@ -252,7 +257,7 @@
         </div>
 
         <!-- Receipt Modal -->
-        <div id="receiptModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div id="receiptModal" class="fixed inset-0 bg-black bg-opacity-50  flex hidden items-center justify-center z-50">
             <div class="bg-white dark:bg-[#252525] p-6 rounded-lg shadow-xl w-full max-w-2xl">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold">Comprobante de Venta</h2>
@@ -355,455 +360,512 @@
 
         <script>
             // Variables to store vehicle data
-            let currentVehicle = null;
-            const AIR_CONDITIONING_PRICE = 500;
-            const METALLIC_PAINT_PRICE = 300;
-            let recentSales = [];
+let currentVehicle = null;
+const AIR_CONDITIONING_PRICE = 500;
+const METALLIC_PAINT_PRICE = 300;
+let recentSales = [];
 
-            // Load recent sales on page load
-            document.addEventListener('DOMContentLoaded', function() {
-                loadRecentSales();
+// Load recent sales on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadRecentSales();
+});
+
+// Function to load recent sales
+function loadRecentSales() {
+    // In a real application, you would fetch this from the backend
+    // For now, we'll use localStorage to simulate persistence
+    const savedSales = localStorage.getItem('recentSales');
+    if (savedSales) {
+        recentSales = JSON.parse(savedSales);
+        updateRecentSalesList();
+    }
+}
+
+// Update the recent sales list in the UI
+function updateRecentSalesList() {
+    const recentSalesList = document.getElementById('recent-sales-list');
+
+    if (recentSales.length === 0) {
+        recentSalesList.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400">No hay ventas recientes para mostrar</p>';
+        return;
+    }
+
+    let html = '<ul class="divide-y divide-gray-200 dark:divide-gray-700">';
+
+    // Show at most 5 recent sales
+    const salesToShow = recentSales.slice(0, 5);
+
+    salesToShow.forEach(sale => {
+        html += `
+            <li class="py-2">
+                <div class="flex justify-between">
+                    <div>
+                        <p class="font-medium">${sale.vehicleBrand} ${sale.vehicleModel}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Cliente: ${sale.clientName}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-medium">$${parseFloat(sale.finalPrice).toFixed(2)}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">${formatDate(sale.date)}</p>
+                    </div>
+                </div>
+            </li>
+        `;
+    });
+
+    html += '</ul>';
+    recentSalesList.innerHTML = html;
+}
+
+// Format date for display
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+// Select a vehicle and open the modal
+function selectVehicle(vehicleId) {
+    fetch(`/api/vehicles/${vehicleId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar los detalles del vehículo');
+            }
+            return response.json();
+        })
+        .then(vehicle => {
+            currentVehicle = vehicle;
+
+            // Fill the modal with vehicle information
+            document.getElementById('modalVehicleTitle').textContent = `${vehicle.brand} ${vehicle.model}`;
+            document.getElementById('modalVehicleBrand').textContent = vehicle.brand;
+            document.getElementById('modalVehicleModel').textContent = vehicle.model;
+            document.getElementById('modalVehicleYear').textContent = vehicle.year;
+            document.getElementById('modalVehicleCylinders').textContent = vehicle.cylinders;
+            document.getElementById('modalVehicleNumberPlate').textContent = vehicle.numberPlate || 'N/A';
+            document.getElementById('modalVehicleBasePrice').textContent = parseFloat(vehicle.price).toFixed(2);
+
+            // Set image
+            const imgElement = document.getElementById('modalVehicleImage');
+            if (vehicle.imgPath) {
+                imgElement.src = vehicle.imgPath.startsWith('/') ? vehicle.imgPath : '/' + vehicle.imgPath;
+            } else {
+                imgElement.src = '/images/car-placeholder.png';
+            }
+
+            // Reset form fields
+            document.getElementById('saleForm').reset();
+
+            // Set form fields
+            document.getElementById('vehicle_id').value = vehicle.id;
+            document.getElementById('air_conditioning').checked = vehicle.airConditioning;
+            document.getElementById('metallic_paint').checked = vehicle.metallicPaint;
+
+            // Reset part payment fields
+            document.getElementById('part_of_payment').checked = false;
+            togglePartPayment();
+
+            // Update price summary
+            updateTotalPrice();
+
+            // Show the modal
+            document.getElementById('vehicleModal').classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Error fetching vehicle details:', error);
+            alert('Error al cargar los detalles del vehículo');
+        });
+}
+
+// Toggle part payment section visibility
+function togglePartPayment() {
+    const isChecked = document.getElementById('part_of_payment').checked;
+    const partPaymentSection = document.getElementById('part_payment_section');
+
+    if (isChecked) {
+        partPaymentSection.classList.remove('hidden');
+    } else {
+        partPaymentSection.classList.add('hidden');
+        // Clear part payment fields
+        document.getElementById('part_payment_brand').value = '';
+        document.getElementById('part_payment_model').value = '';
+        document.getElementById('part_payment_year').value = '';
+        document.getElementById('part_payment_plate').value = '';
+        document.getElementById('part_payment_details').value = '';
+        document.getElementById('part_payment_value').value = '';
+        updateTotalPrice();
+    }
+}
+
+// Update total price based on selected options and part payment
+function updateTotalPrice() {
+    if (!currentVehicle) return;
+
+    const basePrice = parseFloat(currentVehicle.price);
+    let optionsPrice = 0;
+    let partPaymentValue = 0;
+
+    // Calculate additional options
+    if (document.getElementById('air_conditioning').checked) {
+        optionsPrice += AIR_CONDITIONING_PRICE;
+    }
+
+    if (document.getElementById('metallic_paint').checked) {
+        optionsPrice += METALLIC_PAINT_PRICE;
+    }
+
+    // Calculate part payment value
+    if (document.getElementById('part_of_payment').checked) {
+        const partPaymentInput = document.getElementById('part_payment_value').value;
+        partPaymentValue = partPaymentInput ? parseFloat(partPaymentInput) : 0;
+    }
+
+    // Calculate final price
+    const finalPrice = basePrice + optionsPrice - partPaymentValue;
+
+    // Update the summary display
+    document.getElementById('summary_base_price').textContent = basePrice.toFixed(2);
+    document.getElementById('summary_options').textContent = optionsPrice.toFixed(2);
+    document.getElementById('summary_part_payment').textContent = partPaymentValue.toFixed(2);
+    document.getElementById('summary_final_price').textContent = finalPrice.toFixed(2);
+
+    // Reset upfront payment validation
+    validateUpfrontPayment();
+}
+
+// Validate upfront payment amount
+function validateUpfrontPayment() {
+    const upfrontPaymentInput = document.getElementById('upfront_payment');
+    const upfrontPayment = parseFloat(upfrontPaymentInput.value) || 0;
+    const finalPrice = parseFloat(document.getElementById('summary_final_price').textContent);
+    const errorElement = document.getElementById('upfront_payment_error');
+    const completeButton = document.getElementById('complete_sale_btn');
+
+    if (upfrontPayment > finalPrice) {
+        errorElement.classList.remove('hidden');
+        completeButton.disabled = true;
+        completeButton.classList.add('opacity-50');
+    } else {
+        errorElement.classList.add('hidden');
+        completeButton.disabled = false;
+        completeButton.classList.remove('opacity-50');
+    }
+}
+
+// Close the vehicle selection modal
+function closeModal() {
+    document.getElementById('vehicleModal').classList.add('hidden');
+    currentVehicle = null;
+}
+
+// Generate a random invoice number
+function generateInvoiceNumber() {
+    const prefix = 'INV';
+    const timestamp = new Date().getTime().toString().slice(-6);
+    const random = Math.floor(Math.random() * 900 + 100);
+    return `${prefix}-${timestamp}-${random}`;
+}
+
+// Process the sale
+function processSale() {
+    const form = document.getElementById('saleForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    // 1) Gather client & sale options
+    const clientName    = document.getElementById('client_name').value;
+    const clientLastName = document.getElementById('client_last_name').value;
+    const clientEmail   = document.getElementById('client_email').value;
+    const clientPhone   = document.getElementById('client_phone').value;
+    const clientAddress = document.getElementById('client_address').value;
+    const clientDni     = document.getElementById('client_dni').value;
+    const clientRfc     = document.getElementById('client_rfc').value;
+
+    const hasAirConditioning = document.getElementById('air_conditioning').checked;
+    const hasMetallicPaint   = document.getElementById('metallic_paint').checked;
+    const hasPartPayment     = document.getElementById('part_of_payment').checked;
+
+    // 2) Build optional part-payment object
+    let partPaymentData = null;
+    if (hasPartPayment) {
+        partPaymentData = {
+            brand:   document.getElementById('part_payment_brand').value,
+            model:   document.getElementById('part_payment_model').value,
+            year:    document.getElementById('part_payment_year').value,
+            plate:   document.getElementById('part_payment_plate').value,
+            details: document.getElementById('part_payment_details').value,
+            value:   parseFloat(document.getElementById('part_payment_value').value) || 0
+        };
+    }
+
+    // 3) Price calculations
+    const basePrice    = parseFloat(currentVehicle.price);
+    const optionsPrice = (hasAirConditioning ? AIR_CONDITIONING_PRICE : 0) +
+                         (hasMetallicPaint ? METALLIC_PAINT_PRICE : 0);
+    const partPaymentValue = hasPartPayment ? parseFloat(document.getElementById('part_payment_value').value) || 0 : 0;
+    const finalPrice   = basePrice + optionsPrice - partPaymentValue;
+    const upfrontPayment = parseFloat(document.getElementById('upfront_payment').value) || 0;
+    const remainingBalance = finalPrice - upfrontPayment;
+
+    // Get seller ID safely - may be missing in the form
+    const sellerIdInput = document.querySelector('input[name="seller_id"]');
+    const sellerId = sellerIdInput ? sellerIdInput.value : '';
+
+    // Get seller name safely - may be missing in the form
+    const sellerNameInput = document.querySelector('input[name="seller_name"]');
+    const sellerName = sellerNameInput ? sellerNameInput.value : '';
+
+    // 4) Build payload
+    const saleData = {
+        vehicle_id:        currentVehicle.id,
+        client_name:       clientName,
+        client_email:      clientEmail,
+        client_phone:      clientPhone,
+        client_address:    clientAddress,
+        client_dni:        clientDni,
+        client_rfc:        clientRfc,
+        air_conditioning:  hasAirConditioning,
+        metallic_paint:    hasMetallicPaint,
+        has_part_payment:  hasPartPayment,
+        part_payment_data: partPaymentData,
+        base_price:        basePrice,
+        options_price:     optionsPrice,
+        part_payment_value: partPaymentValue,
+        final_price:       finalPrice,
+        upfront_payment:   upfrontPayment,
+        remaining_balance: remainingBalance,
+        seller_id:         sellerId,
+        seller_name:       sellerName,
+        date:              new Date().toISOString()
+    };
+
+    // 5) AJAX call
+    fetch('/ventas', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify(saleData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errorData => {
+                throw new Error(errorData.error || 'Error al procesar la venta');
             });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // 6) Show receipt and update UI
+        // Convert backend data format to our frontend format
+        const receiptData = {
+            date: saleData.date,
+            clientName: saleData.client_name,
+            clientEmail: saleData.client_email,
+            clientPhone: saleData.client_phone,
+            sellerId: {{ Auth::id() }},
+            sellerName: '{{ Auth::user()->name }}',
+            vehicleBrand: currentVehicle.brand,
+            vehicleModel: currentVehicle.model,
+            vehicleYear: currentVehicle.year,
+            vehiclePlate: currentVehicle.numberPlate || 'N/A',
+            hasAirConditioning: saleData.air_conditioning,
+            hasMetallicPaint: saleData.metallic_paint,
+            hasPartPayment: saleData.has_part_payment,
+            partPaymentData: saleData.part_payment_data,
+            partPaymentValue: saleData.part_payment_value,
+            basePrice: saleData.base_price,
+            optionsPrice: saleData.options_price,
+            finalPrice: saleData.final_price,
+            upfrontPayment: saleData.upfront_payment,
+            remainingBalance: saleData.remaining_balance
+        };
 
-            // Function to load recent sales (simulate for now)
-            function loadRecentSales() {
-                // In a real application, you would fetch this from the backend
-                // For now, we'll use localStorage to simulate persistence
-                const savedSales = localStorage.getItem('recentSales');
-                if (savedSales) {
-                    recentSales = JSON.parse(savedSales);
-                    updateRecentSalesList();
+        // Save to recent sales
+        const saleForList = {
+            vehicleBrand: currentVehicle.brand,
+            vehicleModel: currentVehicle.model,
+            clientName: clientName,
+            finalPrice: finalPrice,
+            date: new Date().toISOString()
+        };
+        recentSales.unshift(saleForList);
+        if (recentSales.length > 10) {
+            recentSales.pop();
+        }
+        localStorage.setItem('recentSales', JSON.stringify(recentSales));
+        updateRecentSalesList();
+
+        // Show receipt modal
+        showReceipt(receiptData);
+
+        // Close the sales modal
+        closeModal();
+    })
+    .catch(error => {
+        console.error('Error in sale processing:', error);
+        alert('Error al procesar la venta: ' + error.message);
+    });
+}
+
+
+// Show the receipt modal
+function showReceipt(saleData) {
+    // Fill receipt with sale data
+    document.getElementById('receipt-date').textContent = new Date(saleData.date).toLocaleDateString('es-ES');
+
+    document.getElementById('receipt-client-name').textContent = saleData.clientName;
+    document.getElementById('receipt-client-email').textContent = saleData.clientEmail || 'N/A';
+    document.getElementById('receipt-client-phone').textContent = saleData.clientPhone || 'N/A';
+
+    document.getElementById('receipt-seller-name').textContent = saleData.sellerName;
+    const commission = saleData.finalPrice * 0.03;
+    document.getElementById('receipt-commission').textContent = commission.toFixed(2);
+
+    document.getElementById('receipt-vehicle-brand').textContent = saleData.vehicleBrand;
+    document.getElementById('receipt-vehicle-model').textContent = saleData.vehicleModel;
+    document.getElementById('receipt-vehicle-year').textContent = saleData.vehicleYear;
+    document.getElementById('receipt-vehicle-plate').textContent = saleData.vehiclePlate;
+
+    // Part payment section
+    const partPaymentSection = document.getElementById('receipt-part-payment-section');
+    const partPaymentAmountRow = document.getElementById('receipt-part-payment-amount-row');
+
+    if (saleData.hasPartPayment) {
+        partPaymentSection.classList.remove('hidden');
+        partPaymentAmountRow.classList.remove('hidden');
+
+        document.getElementById('receipt-part-payment-brand').textContent = saleData.partPaymentData.brand;
+        document.getElementById('receipt-part-payment-model').textContent = saleData.partPaymentData.model;
+        document.getElementById('receipt-part-payment-year').textContent = saleData.partPaymentData.year;
+        document.getElementById('receipt-part-payment-plate').textContent = saleData.partPaymentData.plate;
+        document.getElementById('receipt-part-payment-value').textContent = saleData.partPaymentData.value.toFixed(2);
+        document.getElementById('receipt-part-payment-amount').textContent = saleData.partPaymentValue.toFixed(2);
+    } else {
+        partPaymentSection.classList.add('hidden');
+        partPaymentAmountRow.classList.add('hidden');
+    }
+
+    // Price summary
+    document.getElementById('receipt-base-price').textContent = saleData.basePrice.toFixed(2);
+
+    // Options
+    let optionsHtml = '';
+    if (saleData.hasAirConditioning) {
+        optionsHtml += `
+            <div class="grid grid-cols-2 gap-1">
+                <p>Aire acondicionado:</p>
+                <p class="text-right">+$${AIR_CONDITIONING_PRICE.toFixed(2)}</p>
+            </div>
+        `;
+    }
+
+    if (saleData.hasMetallicPaint) {
+        optionsHtml += `
+            <div class="grid grid-cols-2 gap-1">
+                <p>Pintura metálica:</p>
+                <p class="text-right">+$${METALLIC_PAINT_PRICE.toFixed(2)}</p>
+            </div>
+        `;
+    }
+
+    document.getElementById('receipt-options-section').innerHTML = optionsHtml;
+
+    // Final summary
+    document.getElementById('receipt-final-price').textContent = saleData.finalPrice.toFixed(2);
+    document.getElementById('receipt-upfront-payment').textContent = saleData.upfrontPayment.toFixed(2);
+    document.getElementById('receipt-remaining-balance').textContent = saleData.remainingBalance.toFixed(2);
+
+    // Show the receipt modal
+    document.getElementById('receiptModal').classList.remove('hidden');
+}
+
+// Close the receipt modal
+function closeReceiptModal() {
+    document.getElementById('receiptModal').classList.add('hidden');
+}
+
+// Print the receipt
+function printReceipt() {
+    const receiptContent = document.getElementById('receipt-content');
+    const windowContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Comprobante de Venta</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
                 }
-            }
-
-            // Update the recent sales list in the UI
-            function updateRecentSalesList() {
-                const recentSalesList = document.getElementById('recent-sales-list');
-
-                if (recentSales.length === 0) {
-                    recentSalesList.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400">No hay ventas recientes para mostrar</p>';
-                    return;
+                .receipt {
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    border: 1px solid #ccc;
                 }
-
-                let html = '<ul class="divide-y divide-gray-200 dark:divide-gray-700">';
-
-                // Show at most 5 recent sales
-                const salesToShow = recentSales.slice(0, 5);
-
-                salesToShow.forEach(sale => {
-                    html += `
-                        <li class="py-2">
-                            <div class="flex justify-between">
-                                <div>
-                                    <p class="font-medium">${sale.vehicleBrand} ${sale.vehicleModel}</p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">Cliente: ${sale.clientName}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="font-medium">$${parseFloat(sale.finalPrice).toFixed(2)}</p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">${formatDate(sale.date)}</p>
-                                </div>
-                            </div>
-                        </li>
-                    `;
-                });
-
-                html += '</ul>';
-                recentSalesList.innerHTML = html;
-            }
-
-            // Format date for display
-            function formatDate(dateString) {
-                const date = new Date(dateString);
-                return date.toLocaleDateString('es-ES', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-            }
-
-            // Select a vehicle and open the modal
-            function selectVehicle(vehicleId) {
-                fetch(`/api/vehicles/${vehicleId}`)
-                    .then(response => response.json())
-                    .then(vehicle => {
-                        currentVehicle = vehicle;
-
-                        // Fill the modal with vehicle information
-                        document.getElementById('modalVehicleTitle').textContent = `${vehicle.brand} ${vehicle.model}`;
-                        document.getElementById('modalVehicleBrand').textContent = vehicle.brand;
-                        document.getElementById('modalVehicleModel').textContent = vehicle.model;
-                        document.getElementById('modalVehicleYear').textContent = vehicle.year;
-                        document.getElementById('modalVehicleCylinders').textContent = vehicle.cylinders;
-                        document.getElementById('modalVehicleNumberPlate').textContent = vehicle.numberPlate || 'N/A';
-                        document.getElementById('modalVehicleBasePrice').textContent = parseFloat(vehicle.price).toFixed(2);
-
-                        // Set image
-                        const imgElement = document.getElementById('modalVehicleImage');
-                        if (vehicle.imgPath) {
-                            imgElement.src = vehicle.imgPath.startsWith('/') ? vehicle.imgPath : '/' + vehicle.imgPath;
-                        } else {
-                            imgElement.src = '/images/car-placeholder.png';
-                        }
-
-                        // Set form fields
-                        document.getElementById('vehicle_id').value = vehicle.id;
-                        document.getElementById('air_conditioning').checked = vehicle.airConditioning;
-                        document.getElementById('metallic_paint').checked = vehicle.metallicPaint;
-
-                        // Reset part payment fields
-                        document.getElementById('part_of_payment').checked = false;
-                        togglePartPayment();
-
-                        // Reset client fields
-                        document.getElementById('saleForm').reset();
-                        document.getElementById('vehicle_id').value = vehicle.id; // Re-set vehicle ID after form reset
-                        document.getElementById('air_conditioning').checked = vehicle.airConditioning;
-                        document.getElementById('metallic_paint').checked = vehicle.metallicPaint;
-
-                        // Update price summary
-                        updateTotalPrice();
-
-                        // Show the modal
-                        document.getElementById('vehicleModal').classList.remove('hidden');
-                    })
-                    .catch(error => {
-                        console.error('Error fetching vehicle details:', error);
-                        alert('Error al cargar los detalles del vehículo');
-                    });
-            }
-
-            // Toggle part payment section visibility
-            function togglePartPayment() {
-                const isChecked = document.getElementById('part_of_payment').checked;
-                const partPaymentSection = document.getElementById('part_payment_section');
-
-                if (isChecked) {
-                    partPaymentSection.classList.remove('hidden');
-                } else {
-                    partPaymentSection.classList.add('hidden');
-                    document.getElementById('part_payment_brand').value = '';
-                    document.getElementById('part_payment_model').value ='';
-                    document.getElementById('part_payment_model').value = '';
-                    document.getElementById('part_payment_year').value = '';
-                    document.getElementById('part_payment_plate').value = '';
-                    document.getElementById('part_payment_details').value = '';
-                    document.getElementById('part_payment_value').value = '';
-                    updateTotalPrice();
+                .text-center {
+                    text-align: center;
                 }
-            }
-
-            // Update total price based on selected options and part payment
-            function updateTotalPrice() {
-                if (!currentVehicle) return;
-
-                const basePrice = parseFloat(currentVehicle.price);
-                let optionsPrice = 0;
-                let partPaymentValue = 0;
-
-                // Calculate additional options
-                if (document.getElementById('air_conditioning').checked) {
-                    optionsPrice += AIR_CONDITIONING_PRICE;
+                .grid-2 {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
                 }
-
-                if (document.getElementById('metallic_paint').checked) {
-                    optionsPrice += METALLIC_PAINT_PRICE;
+                .grid-col-2 {
+                    grid-column: span 2;
                 }
-
-                // Calculate part payment value
-                if (document.getElementById('part_of_payment').checked) {
-                    const partPaymentInput = document.getElementById('part_payment_value').value;
-                    partPaymentValue = partPaymentInput ? parseFloat(partPaymentInput) : 0;
+                .font-bold {
+                    font-weight: bold;
                 }
-
-                // Calculate final price
-                const finalPrice = basePrice + optionsPrice - partPaymentValue;
-
-                // Update the summary display
-                document.getElementById('summary_base_price').textContent = basePrice.toFixed(2);
-                document.getElementById('summary_options').textContent = optionsPrice.toFixed(2);
-                document.getElementById('summary_part_payment').textContent = partPaymentValue.toFixed(2);
-                document.getElementById('summary_final_price').textContent = finalPrice.toFixed(2);
-
-                // Reset upfront payment validation
-                validateUpfrontPayment();
-            }
-
-            // Validate upfront payment amount
-            function validateUpfrontPayment() {
-                const upfrontPayment = parseFloat(document.getElementById('upfront_payment').value) || 0;
-                const finalPrice = parseFloat(document.getElementById('summary_final_price').textContent);
-                const errorElement = document.getElementById('upfront_payment_error');
-
-                if (upfrontPayment > finalPrice) {
-                    errorElement.classList.remove('hidden');
-                    document.getElementById('complete_sale_btn').disabled = true;
-                } else {
-                    errorElement.classList.add('hidden');
-                    document.getElementById('complete_sale_btn').disabled = false;
+                .text-right {
+                    text-align: right;
                 }
-            }
-
-            // Close the vehicle selection modal
-            function closeModal() {
-                document.getElementById('vehicleModal').classList.add('hidden');
-                currentVehicle = null;
-            }
-
-            // Process the sale
-            function processSale() {
-                // Form validation
-                const form = document.getElementById('saleForm');
-                if (!form.checkValidity()) {
-                    form.reportValidity();
-                    return;
+                .border-top {
+                    border-top: 1px solid #ccc;
+                    padding-top: 10px;
+                    margin-top: 10px;
                 }
-
-                // Get all form data
-                const clientName = document.getElementById('client_name').value;
-                const clientEmail = document.getElementById('client_email').value;
-                const clientPhone = document.getElementById('client_phone').value;
-                const clientAddress = document.getElementById('client_address').value;
-                const clientDni = document.getElementById('client_dni').value;
-                const clientRfc = document.getElementById('client_rfc').value;
-
-                const hasAirConditioning = document.getElementById('air_conditioning').checked;
-                const hasMetallicPaint = document.getElementById('metallic_paint').checked;
-
-                const hasPartPayment = document.getElementById('part_of_payment').checked;
-                let partPaymentData = null;
-
-                if (hasPartPayment) {
-                    partPaymentData = {
-                        brand: document.getElementById('part_payment_brand').value,
-                        model: document.getElementById('part_payment_model').value,
-                        year: document.getElementById('part_payment_year').value,
-                        plate: document.getElementById('part_payment_plate').value,
-                        details: document.getElementById('part_payment_details').value,
-                        value: parseFloat(document.getElementById('part_payment_value').value) || 0
-                    };
+                .mt-4 {
+                    margin-top: 16px;
                 }
-
-                const basePrice = parseFloat(currentVehicle.price);
-                const optionsPrice = (hasAirConditioning ? AIR_CONDITIONING_PRICE : 0) +
-                                     (hasMetallicPaint ? METALLIC_PAINT_PRICE : 0);
-                const partPaymentValue = hasPartPayment ? partPaymentData.value : 0;
-                const finalPrice = basePrice + optionsPrice - partPaymentValue;
-                const upfrontPayment = parseFloat(document.getElementById('upfront_payment').value) || 0;
-                const remainingBalance = finalPrice - upfrontPayment;
-
-                // Create sale data object
-                const saleData = {
-                    vehicleId: currentVehicle.id,
-                    vehicleBrand: currentVehicle.brand,
-                    vehicleModel: currentVehicle.model,
-                    vehicleYear: currentVehicle.year,
-                    vehiclePlate: currentVehicle.numberPlate || 'N/A',
-
-                    clientName,
-                    clientEmail,
-                    clientPhone,
-                    clientAddress,
-                    clientDni,
-                    clientRfc,
-
-                    hasAirConditioning,
-                    hasMetallicPaint,
-
-                    hasPartPayment,
-                    partPaymentData,
-
-                    basePrice,
-                    optionsPrice,
-                    partPaymentValue,
-                    finalPrice,
-                    upfrontPayment,
-                    remainingBalance,
-
-                    sellerId: {{ Auth::id() }},
-                    sellerName: '{{ Auth::user()->name }}',
-                    date: new Date().toISOString(),
-                    invoiceNumber: generateInvoiceNumber()
-                };
-
-                // In a real application, you would send this data to the server
-                // For now, we'll simulate by storing in localStorage and showing the receipt
-
-                // Add to recent sales
-                recentSales.unshift(saleData);
-                localStorage.setItem('recentSales', JSON.stringify(recentSales.slice(0, 20)));
-
-                // Show receipt
-                showReceipt(saleData);
-
-                // Close the vehicle modal
-                closeModal();
-
-                // Update the recent sales list
-                updateRecentSalesList();
-            }
-
-            // Generate a random invoice number
-            function generateInvoiceNumber() {
-                const prefix = 'INV';
-                const timestamp = new Date().getTime().toString().slice(-6);
-                const random = Math.floor(Math.random() * 900 + 100);
-                return `${prefix}-${timestamp}-${random}`;
-            }
-
-            // Show the receipt modal
-            function showReceipt(saleData) {
-                // Fill receipt with sale data
-                document.getElementById('receipt-invoice-number').textContent = saleData.invoiceNumber;
-                document.getElementById('receipt-date').textContent = new Date(saleData.date).toLocaleDateString('es-ES');
-
-                document.getElementById('receipt-client-name').textContent = saleData.clientName;
-                document.getElementById('receipt-client-email').textContent = saleData.clientEmail || 'N/A';
-                document.getElementById('receipt-client-phone').textContent = saleData.clientPhone || 'N/A';
-
-                document.getElementById('receipt-seller-name').textContent = saleData.sellerName;
-                const commission = saleData.finalPrice * 0.03;
-                document.getElementById('receipt-commission').textContent = commission.toFixed(2);
-
-                document.getElementById('receipt-vehicle-brand').textContent = saleData.vehicleBrand;
-                document.getElementById('receipt-vehicle-model').textContent = saleData.vehicleModel;
-                document.getElementById('receipt-vehicle-year').textContent = saleData.vehicleYear;
-                document.getElementById('receipt-vehicle-plate').textContent = saleData.vehiclePlate;
-
-                // Part payment section
-                const partPaymentSection = document.getElementById('receipt-part-payment-section');
-                const partPaymentAmountRow = document.getElementById('receipt-part-payment-amount-row');
-
-                if (saleData.hasPartPayment) {
-                    partPaymentSection.classList.remove('hidden');
-                    partPaymentAmountRow.classList.remove('hidden');
-
-                    document.getElementById('receipt-part-payment-brand').textContent = saleData.partPaymentData.brand;
-                    document.getElementById('receipt-part-payment-model').textContent = saleData.partPaymentData.model;
-                    document.getElementById('receipt-part-payment-year').textContent = saleData.partPaymentData.year;
-                    document.getElementById('receipt-part-payment-plate').textContent = saleData.partPaymentData.plate;
-                    document.getElementById('receipt-part-payment-value').textContent = saleData.partPaymentData.value.toFixed(2);
-                    document.getElementById('receipt-part-payment-amount').textContent = saleData.partPaymentValue.toFixed(2);
-                } else {
-                    partPaymentSection.classList.add('hidden');
-                    partPaymentAmountRow.classList.add('hidden');
+                .mb-4 {
+                    margin-bottom: 16px;
                 }
-
-                // Price summary
-                document.getElementById('receipt-base-price').textContent = saleData.basePrice.toFixed(2);
-
-                // Options
-                let optionsHtml = '';
-                if (saleData.hasAirConditioning) {
-                    optionsHtml += `
-                        <div class="grid grid-cols-2 gap-1">
-                            <p>Aire acondicionado:</p>
-                            <p class="text-right">+$${AIR_CONDITIONING_PRICE.toFixed(2)}</p>
-                        </div>
-                    `;
+                .text-sm {
+                    font-size: 0.875rem;
                 }
-
-                if (saleData.hasMetallicPaint) {
-                    optionsHtml += `
-                        <div class="grid grid-cols-2 gap-1">
-                            <p>Pintura metálica:</p>
-                            <p class="text-right">+$${METALLIC_PAINT_PRICE.toFixed(2)}</p>
-                        </div>
-                    `;
+                .text-gray {
+                    color: #666;
                 }
+            </style>
+        </head>
+        <body>
+            <div class="receipt">
+                ${receiptContent.innerHTML}
+            </div>
+        </body>
+        </html>
+    `;
 
-                document.getElementById('receipt-options-section').innerHTML = optionsHtml;
+    const printWindow = window.open('', '_blank', 'height=600,width=800');
+    printWindow.document.write(windowContent);
+    printWindow.document.close();
+    printWindow.focus();
 
-                // Final summary
-                document.getElementById('receipt-final-price').textContent = saleData.finalPrice.toFixed(2);
-                document.getElementById('receipt-upfront-payment').textContent = saleData.upfrontPayment.toFixed(2);
-                document.getElementById('receipt-remaining-balance').textContent = saleData.remainingBalance.toFixed(2);
-
-                // Show the receipt modal
-                document.getElementById('receiptModal').classList.remove('hidden');
-
-                // In a real application, you would make an AJAX request to save the sale in the database
-                // For demonstration purposes, we're using localStorage
-            }
-
-            // Close the receipt modal
-            function closeReceiptModal() {
-                document.getElementById('receiptModal').classList.add('hidden');
-            }
-
-            // Print the receipt
-            function printReceipt() {
-                const receiptContent = document.getElementById('receipt-content');
-                const windowContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Comprobante de Venta</title>
-                        <style>
-                            body {
-                                font-family: Arial, sans-serif;
-                                margin: 0;
-                                padding: 20px;
-                            }
-                            .receipt {
-                                max-width: 800px;
-                                margin: 0 auto;
-                                padding: 20px;
-                                border: 1px solid #ccc;
-                            }
-                            .text-center {
-                                text-align: center;
-                            }
-                            .grid-2 {
-                                display: grid;
-                                grid-template-columns: 1fr 1fr;
-                                gap: 10px;
-                            }
-                            .grid-col-2 {
-                                grid-column: span 2;
-                            }
-                            .font-bold {
-                                font-weight: bold;
-                            }
-                            .text-right {
-                                text-align: right;
-                            }
-                            .border-top {
-                                border-top: 1px solid #ccc;
-                                padding-top: 10px;
-                                margin-top: 10px;
-                            }
-                            .mt-4 {
-                                margin-top: 16px;
-                            }
-                            .mb-4 {
-                                margin-bottom: 16px;
-                            }
-                            .text-sm {
-                                font-size: 0.875rem;
-                            }
-                            .text-gray {
-                                color: #666;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="receipt">
-                            ${receiptContent.innerHTML}
-                        </div>
-                    </body>
-                    </html>
-                `;
-
-                const printWindow = window.open('', '_blank', 'height=600,width=800');
-                printWindow.document.write(windowContent);
-                printWindow.document.close();
-                printWindow.focus();
-
-                setTimeout(() => {
-                    printWindow.print();
-                    printWindow.close();
-                }, 500);
-            }
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+}
         </script>
     </body>
 </html>
