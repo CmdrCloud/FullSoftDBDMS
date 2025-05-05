@@ -10,11 +10,16 @@
     </head>
 
     <body class="bg-[#FDFDFC] dark:bg-[#0a0a0a] text-[#1b1b18] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
+
         {{-- Navbar --}}
         <nav class="absolute top-0 left-0 w-full bg-white dark:bg-[#0a0a0a] p-4 shadow-md">
             <div class="container mx-auto flex justify-between items-center">
                 <div class="flex items-center">
-                    <a href="{{ route('home')}} " class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] text-[#1b1b18] rounded-sm text-lg leading-normal cursor-pointer hover:text-zinc-200 dark:hover:text-zinc-50">FullSoft</a>
+                    <a href="{{ route('home')}}" class="inline-block py-1.5 dark:text-[#EDEDEC] text-[#1b1b18] rounded-sm text-lg leading-normal cursor-pointer hover:text-zinc-200 dark:hover:text-zinc-50">FullSoft</a>
+                </div>
+                <div>
+                    <a href="{{ route('dashboard')}}" class="inline-block px-2 py-1.5 dark:text-[#EDEDEC] text-[#1b1b18] rounded-sm text-sm leading-normal cursor-pointer hover:text-zinc-200 dark:hover:text-zinc-50 no-underline transition-colors hover:underline">Regresar</a>
+                    <a href="{{ route('logout') }}" class="inline-block px-2 py-1.5 dark:text-[#EDEDEC] text-[#1b1b18] rounded-sm text-sm leading-normal cursor-pointer hover:text-zinc-200 dark:hover:text-zinc-50 no-underline transition-colors hover:underline">Cerrar Sesion</a>
                 </div>
             </div>
         </nav>
@@ -39,14 +44,9 @@
                             <option value="resumido">Resumido</option>
                         </select>
 
-                        <label for="formato" class="block text-sm font-medium text-gray-700 mt-4">Formato</label>
-                        <select id="formato" name="formato" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#1b1b18] focus:ring-[#1b1b18]" required>
-                            <option value="pdf">PDF</option>
-                            <option value="excel">Excel</option>
-                            <option value="csv">CSV</option>
-                        </select>
+                        
 
-                        <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 transition duration-300 mt-4">
+                        <button type="submit" class="w-full bg-red-700 text-white py-2 px-4 rounded hover:bg-red-700 transition duration-300 mt-4">
                             Generar Reporte
                         </button>
                     </form>
