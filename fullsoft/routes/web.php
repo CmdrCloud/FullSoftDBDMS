@@ -5,19 +5,21 @@ use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VentasController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\ReporteController;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
 
 /*
-|--------------------------------------------------------------------------
+|-------------------------------------------------------------------------- 
 | Public Pages
-|--------------------------------------------------------------------------
+|-------------------------------------------------------------------------- 
 */
 Route::get('/', fn() => view('welcome'))->name('home');
 Route::get('ventas', [VentasController::class, 'index'])->name('ventas');
 Route::get('catalogo', [CatalogController::class, 'index'])->name('catalogo');
+<<<<<<< HEAD
 Route::view('reportes', 'reportes')->name('reportes');
 
 
@@ -32,7 +34,12 @@ Route::post('backup', [BackupController::class, 'create'])
 Route::get('backup/download/{filename}', [BackupController::class, 'download'])
      ->name('backup.download');
 
+=======
+Route::view('backup', 'backup')->name('backup');
+Route::view('reportes', 'reportes')->name('reportes');
+>>>>>>> Ruy
 Route::get('api/vehicles/{id}', [VentasController::class, 'getVehicleDetails']);
+Route::get('/reporte-ventas', [ReporteController::class, 'generarReporteVentas'])->name('reportes.ventas');
 
 Route::get('home', fn() => redirect()->route('home'));
 
@@ -40,9 +47,9 @@ Route::get('home', fn() => redirect()->route('home'));
 require __DIR__.'/auth.php';
 
 /*
-|--------------------------------------------------------------------------
+|-------------------------------------------------------------------------- 
 | Protected (Auth + Verified)
-|--------------------------------------------------------------------------
+|-------------------------------------------------------------------------- 
 */
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard
@@ -50,14 +57,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // User settings (Livewire)
     Route::redirect('settings', 'settings/profile');
-    Route::get('settings/profile',    Profile::class)->name('settings.profile');
-    Route::get('settings/password',   Password::class)->name('settings.password');
+    Route::get('settings/profile', Profile::class)->name('settings.profile');
+    Route::get('settings/password', Password::class)->name('settings.password');
     Route::get('settings/appearance', Appearance::class)->name('settings.appearance');
 
     /*
-    |--------------------------------------------------
+    |-------------------------------------------------- 
     | Vehicles - Protected by "Encargado de Ventas" role
-    |--------------------------------------------------
+    |-------------------------------------------------- 
     */
     Route::middleware('role:Encargado de Ventas')->group(function () {
         // "Manage Vehicles" page
@@ -69,9 +76,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     /*
-    |--------------------------------------------------
+    |-------------------------------------------------- 
     | Users - Protected by "Encargado de Ventas" role
-    |--------------------------------------------------
+    |-------------------------------------------------- 
     */
     Route::middleware('role:Encargado de Ventas')->group(function () {
         // "Manage Users" page
@@ -83,12 +90,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     /*
-    |--------------------------------------------------
+    |-------------------------------------------------- 
     | API Routes for Vehicle Sales
-    |--------------------------------------------------
+    |-------------------------------------------------- 
     */
     Route::prefix('api')->group(function () {
         // Procesa la venta
         Route::post('process-sale', [VentasController::class, 'processSale']);
     });
+
+    // Esta ruta es la que permite exportar el reporte
+    Route::get('/reporte-ventas/exportar', [ReporteController::class, 'exportarReporte'])->name('reportes.exportar');
+
+
 });
+
